@@ -10,7 +10,7 @@
 html,body{height:100%;overflow:hidden;font-family:Arial,Helvetica,sans-serif;background:#111827;color:#f3f4f6;font-size:14px}
 #top{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#0f172a;border-bottom:2px solid #dc2626;flex-shrink:0}
 #top h1{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;flex:1;color:#f9fafb}
-#month-sel{background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 7px;font-size:12px;-webkit-appearance:auto;appearance:auto;min-width:80px}
+#month-sel{background:#1e293b;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:5px 7px;font-size:12px}
 #btn-start{padding:7px 13px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:#16a34a;color:white;white-space:nowrap}
 #gps-bar{display:flex;align-items:center;gap:7px;padding:4px 12px;background:#0f172a;border-bottom:1px solid #1e293b;flex-shrink:0}
 .dot{width:8px;height:8px;border-radius:50%;background:#4b5563;flex-shrink:0}
@@ -170,20 +170,7 @@ button:active{opacity:.7}
 </div>
 <div id="top">
 <div style="flex:1"><h1>&#9993; Маршрут листоноші</h1></div>
-<select id="month-sel">
-<option value="1">Січень</option>
-<option value="2">Лютий</option>
-<option value="3">Березень</option>
-<option value="4" selected>Квітень</option>
-<option value="5">Травень</option>
-<option value="6">Червень</option>
-<option value="7">Липень</option>
-<option value="8">Серпень</option>
-<option value="9">Вересень</option>
-<option value="10">Жовтень</option>
-<option value="11">Листопад</option>
-<option value="12">Грудень</option>
-</select>
+<select id="month-sel"></select>
 <button id="btn-start" onclick="onStart()">&#9654; Старт</button>
 </div>
 <div id="gps-bar">
@@ -293,11 +280,16 @@ function cpub(p){return p.replace(/^\d{5}\s+/,’’).replace(/\s*(МСП=\d+)\s
 function fmtM(months){if(!months||!months.length)return ‘’;if(months.length===12)return ‘весь рік’;return months.map(function(m){return MNS[m-1];}).join(’ ‘);}
 function dist(la1,lo1,la2,lo2){var R=6371000,dr=Math.PI/180;var dLa=(la2-la1)*dr,dLo=(lo2-lo1)*dr;var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*dr)*Math.cos(la2*dr)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 function stopKey(s){return s.street+’|’+s.house;}
-function getM(){var v=parseInt(document.getElementById(‘month-sel’).value,10);return(v>=1&&v<=12)?v:new Date().getMonth()+1;}
+function getM(){return +document.getElementById(‘month-sel’).value;}
 function preItemPubKey(sk,pub){return ‘pub_’+sk+’_’+pub;}
 
 /* ── MONTH SELECTOR ── */
-document.getElementById(‘month-sel’).onchange=function(){renderPre();updateCnt();if(mapOk)drawMap();updateMonOv();};
+(function(){
+var sel=document.getElementById(‘month-sel’);
+var now=new Date().getMonth()+1;
+for(var i=1;i<=12;i++){var o=document.createElement(‘option’);o.value=i;o.textContent=MN[i-1];if(i===now)o.selected=true;sel.appendChild(o);}
+sel.onchange=function(){renderPre();updateCnt();if(mapOk)drawMap();updateMonOv();};
+})();
 
 /* ── STORAGE ── */
 function getSunday(){
@@ -331,7 +323,7 @@ function schedSave(){
 if(SAVE_TIMER)clearTimeout(SAVE_TIMER);
 SAVE_TIMER=setTimeout(offerSave,800);
 }
-function escQ(s){return (s||’’).replace(/\/g,’\\’).replace(/’/g,”\’”)}
+function escQ(s){var r=(s||’’);r=r.split(’\’).join(’\\’);r=r.split(”’”).join(”\’”);return r;}
 function offerSave(){
 var html=document.documentElement.outerHTML;
 html=html.split(“var SAVED_PICKED=’’”).join(“var SAVED_PICKED=’”+escQ(SAVED_PICKED||’’)+”’”);
@@ -477,7 +469,7 @@ html+=’<div style="flex:1">’;
 html+=’<div class="pa">’+(ps?ps+’ ‘:’’)+s.street+’, буд. ‘+s.house+’</div>’;
 html+=’<div class="pp">’;
 if(allPkd)html+=’<span style="color:#22c55e">✓ Всі видані</span>’;
-else{var nn=notPicked.map(function(p){return cpub(p.pub);});html+=’📰 ‘+nn.slice(0,3).join(’ · ‘)+(nn.length>3?’ +ще ‘+(nn.length-3):’’);}
+else{var nn=notPicked.map(function(p){return cpub(p.pub);});html+=‘📰 ‘+nn.slice(0,3).join(’ · ‘)+(nn.length>3?’ +ще ‘+(nn.length-3):’’);}
 if(s.note)html+=’<br><span style="color:#f87171">⚠ ‘+s.note+’</span>’;
 html+=’</div></div>’;
 html+=’<div class="pi-arr">▶</div>’;
@@ -487,13 +479,13 @@ for(var pi3=0;pi3<pubs.length;pi3++){
 var pub=pubs[pi3],kidx=PRE_KEYS.length;
 PRE_KEYS.push(pub.key);
 html+=’<div class="pi-pub-row">’;
-html+=’<div class="pi-pub-chk'+(pub.picked?' on':'')+'" onclick="tgPrePub('+kidx+')">’+(pub.picked?’✓’:’’)+’</div>’;
+html+=’<div class="pi-pub-chk'+(pub.picked?' on':'')+'" onclick="tgPrePub('+kidx+')">’+(pub.picked?‘✓’:’’)+’</div>’;
 html+=’<div class="pi-pub-nm'+(pub.picked?' pk':'')+'">’+cpub(pub.pub)+’</div>’;
 html+=’<span class="pi-pub-per">’+fmtM(pub.months)+’</span>’;
 html+=’</div>’;
 }
 html+=’<div style="padding:6px 13px 8px 46px">’;
-html+=’<button onclick="tgPreAll('+i+')" style="width:100%;padding:8px;background:'+(allPkd?'#374151':'#16a34a')+';color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">’+(allPkd?‘Зняти всі’:’✓ Відмітити всі’)+’</button>’;
+html+=’<button onclick="tgPreAll('+i+')" style="width:100%;padding:8px;background:'+(allPkd?'#374151':'#16a34a')+';color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">’+(allPkd?‘Зняти всі’:‘✓ Відмітити всі’)+’</button>’;
 html+=’</div>’;
 html+=’</div></div>’;
 }
@@ -802,6 +794,7 @@ var v=getBV();if(v)u.voice=v;synth.speak(u);
 function setHint(v){document.getElementById(‘srch-inp’).value=v;doSearch();}
 function hl(text,q){var i=text.toLowerCase().indexOf(q.toLowerCase());if(i<0)return text;return text.slice(0,i)+’<span class="hl">’+text.slice(i,i+q.length)+’</span>’+text.slice(i+q.length);}
 function doSearch(){
+SR_KEYS=[];
 var q=(document.getElementById(‘srch-inp’).value||’’).trim();
 var m=getM(),res=document.getElementById(‘srch-res’),stat=document.getElementById(‘srch-stat’);
 if(!q){renderAllAddr(m);return;}
@@ -825,7 +818,8 @@ var ps=s[‘пс’]?(PSI[s[‘пс’]]||’’):’’;
 var act=[],seen={};
 s.subscribers.forEach(function(sub){sub.pubs.forEach(function(p){if(p.months.indexOf(m)>=0&&!seen[p.pub]){seen[p.pub]=1;act.push(cpub(p.pub));}});});
 var names=s.subscribers.filter(function(sub){return sub.name;}).map(function(sub){return hl(tc(sub.name),q);});
-html+=’<div class=“sr’+(pk?’ pk’:’’)+’” onclick=“openSrStop('’+key.replace(/’/g,”\’”)+’')”>’
+var kidx=SR_KEYS.length;SR_KEYS.push(key);
+html+=’<div class="sr'+(pk?' pk':'')+'" onclick="openSR('+kidx+')">’
 +’<div class="sra">’+(ps?ps+’ ‘:’’)+hl(s.street+’, будинок ‘+s.house,q)+(pk?’ <span style="color:#22c55e;font-size:11px">✓</span>’:’’)+’</div>’
 +(names.length?’<div class="srs">’+names.join(’ · ‘)+’</div>’:’’)
 +(act.length?’<div class="srp">📰 ‘+act.map(function(p){return hl(p,q);}).join(’, ‘)+’</div>’:’’)
@@ -834,6 +828,7 @@ html+=’<div class=“sr’+(pk?’ pk’:’’)+’” onclick=“openSrStop(
 res.innerHTML=html;
 }
 function renderAllAddr(m){
+SR_KEYS=[];
 var stat=document.getElementById(‘srch-stat’),res=document.getElementById(‘srch-res’),all=allForM();
 stat.textContent=MN[m-1]+’ · адрес: ‘+all.length;
 var streets=[],sm={};
@@ -847,7 +842,8 @@ var ps=s[‘пс’]?(PSI[s[‘пс’]]||’’):’’;
 var act=[],seen={};
 s.subscribers.forEach(function(sub){sub.pubs.forEach(function(p){if(p.months.indexOf(m)>=0&&!seen[p.pub]){seen[p.pub]=1;act.push(cpub(p.pub));}});});
 var names=s.subscribers.filter(function(sub){return sub.name;}).map(function(sub){return tc(sub.name);});
-html+=’<div class=“sr’+(pk?’ pk’:’’)+’” onclick=“openSrStop('’+key.replace(/’/g,”\’”)+’')”>’
+var kidx=SR_KEYS.length;SR_KEYS.push(key);
+html+=’<div class="sr'+(pk?' pk':'')+'" onclick="openSR('+kidx+')">’
 +’<div class="sra">’+(ps?ps+’ ‘:’’)+‘буд. ‘+s.house+(pk?’ <span style="color:#22c55e">✓</span>’:’’)+’</div>’
 +(names.length?’<div class="srs">’+names.join(’, ‘)+’</div>’:’’)
 +(act.length?’<div class="srp">’+act.join(’ · ‘)+’</div>’:’’)+’</div>’;
@@ -855,6 +851,7 @@ html+=’<div class=“sr’+(pk?’ pk’:’’)+’” onclick=“openSrStop(
 });
 res.innerHTML=html;
 }
+function openSR(i){openSrStop(SR_KEYS[i]);}
 function openSrStop(key){
 var s=null;ALL.forEach(function(a){if(stopKey(a)===key)s=a;});if(!s)return;
 sw(1);if(!mapOk)initMap();
@@ -865,6 +862,7 @@ else{camLat=s.lat;camLng=s.lng;zoom=17;tileCache={};drawMap();toast(s.street+’
 
 /* ── AS ── */
 var AS_KEYS=[];
+var SR_KEYS=[];
 function renderAS(){
 var m=getM(),el=document.getElementById(‘as-list’);if(!el)return;
 AS_KEYS=[];var tot=0,dpk=0,html=’’;
@@ -896,7 +894,7 @@ for(var bai2=0;bai2<bActs.length;bai2++){
 var p2=bActs[bai2],isPk=!!picked[‘as_item_’+p2.key],kidx=AS_KEYS.length;
 AS_KEYS.push(p2.key);
 html+=’<div class="as-pub-item">’;
-html+=’<div class="as-pub-chk'+(isPk?' on':'')+'" onclick="tgPub('+kidx+')">’+(isPk?’✓’:’’)+’</div>’;
+html+=’<div class="as-pub-chk'+(isPk?' on':'')+'" onclick="tgPub('+kidx+')">’+(isPk?‘✓’:’’)+’</div>’;
 html+=’<div style="flex:1"><div class="as-pub-name'+(isPk?' pk':'')+'">’+cpub(p2.pub)+’</div>’;
 html+=’<div class="as-pub-sub">’+tc(p2.name)+’</div></div>’;
 html+=’<span class="as-pub-per">’+fmtM(p2.months)+’</span></div>’;
@@ -984,10 +982,6 @@ toastTimer=setTimeout(function(){t.classList.remove(‘show’);},3000);
 
 /* ── INIT ── */
 window.addEventListener(‘load’,function(){
-// Set current month explicitly
-var nowM=new Date().getMonth()+1;
-var sel=document.getElementById(‘month-sel’);
-if(sel&&(!sel.value||parseInt(sel.value,10)<1)) sel.value=nowM;
 loadPicked();updateWI();renderPre();updateCnt();
 if(synth&&synth.onvoiceschanged!==undefined)synth.onvoiceschanged=function(){};
 });
